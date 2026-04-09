@@ -1,5 +1,7 @@
 package com.example.demo.feature.game.di
 
+import com.example.demo.core.simulation.SimulationEngine
+import com.example.demo.domain.util.SimulationThread
 import com.example.demo.feature.game.MainGameViewModel
 import com.example.demo.feature.game.home.GameHomeViewModel
 import com.example.demo.feature.game.saveGame.SaveGameViewModel
@@ -16,23 +18,24 @@ val gameFeatureModule = module {
             val source = requireNotNull(getSource<GameSessionSource>()) {
                 "Game session scope not found."
             }
-            GameSessionStore(
+            val thread = get<SimulationThread>()
+            SimulationEngine(
                 saveId = source.saveId,
+                dispatcher = thread.dispatcher,
                 loadGuildSaveFileUseCase = get(),
                 saveGuildFileUseCase = get(),
-                createNewCharacterMetaUseCase = get(),
             )
         }
 
         viewModel {
             MainGameViewModel(
-                session = get()
+                simulation = get()
             )
         }
 
         viewModel {
             GameHomeViewModel(
-                session = get()
+                simulation = get()
             )
         }
 
@@ -41,7 +44,7 @@ val gameFeatureModule = module {
                 guildId = guildId,
                 getGuildSaveFilesUseCase = get(),
                 createNewGuildSaveFileUseCase = get(),
-                session = get()
+                simulation = get()
             )
         }
     }

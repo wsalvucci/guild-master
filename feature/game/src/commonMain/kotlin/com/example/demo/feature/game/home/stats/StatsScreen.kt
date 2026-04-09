@@ -179,7 +179,6 @@ private fun StatsScreenPreview() {
                         experience = 7
                     ),
                 ),
-                activeTasks = emptyList(),
             )
         )
     }

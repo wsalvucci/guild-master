@@ -211,7 +211,7 @@ fun GameHomeScreen(
                 }
                 1 -> {
                     WorkshopScreen(
-                        activeTasks = state.worldSave?.characterData?.activeTasks ?: emptyList(),
+                        activeTasks = state.worldSave?.activeTasks ?: emptyList(),
                         startTask = onStartTask,
                         modifier = Modifier.padding(innerPadding)
                     )

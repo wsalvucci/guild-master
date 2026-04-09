@@ -92,8 +92,8 @@ class WorldSaveRepositoryImpl(
                                 experience = 0L
                             )
                     },
-                activeTasks = emptyList(), // TODO
             ),
+            activeTasks = emptyList(), // TODO
             // TODO
             guild = Guild(
                 id = 0L,
@@ -130,7 +130,6 @@ class WorldSaveRepositoryImpl(
 
 private fun CharacterMeta.toDomain(): com.example.demo.domain.model.worldsave.CharacterMeta =
     com.example.demo.domain.model.worldsave.CharacterMeta(
-        id = id,
         name = name,
     )
 

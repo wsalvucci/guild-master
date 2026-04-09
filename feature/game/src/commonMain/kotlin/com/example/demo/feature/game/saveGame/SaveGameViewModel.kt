@@ -2,18 +2,14 @@ package com.example.demo.feature.game.saveGame
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.demo.domain.model.worldsave.WorldSave
+import com.example.demo.core.simulation.SimulationEngine
 import com.example.demo.domain.model.WorldSaveSlot
-import com.example.demo.domain.repository.SaveSlotRepository
 import com.example.demo.domain.usecases.CreateNewGuildSaveFileUseCase
 import com.example.demo.domain.usecases.GetGuildSaveFilesUseCase
-import com.example.demo.domain.usecases.SaveGuildFileUseCase
-import com.example.demo.feature.game.di.GameSessionStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 
 private const val MAX_SLOTS = 20
 
@@ -35,7 +31,7 @@ class SaveGameViewModel(
     private val guildId: Long,
     private val getGuildSaveFilesUseCase: GetGuildSaveFilesUseCase,
     private val createNewGuildSaveFileUseCase: CreateNewGuildSaveFileUseCase,
-    private val session: GameSessionStore
+    private val simulation: SimulationEngine
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SaveGameState())
@@ -85,7 +81,7 @@ class SaveGameViewModel(
     ) {
         val target = _state.value.slots.firstOrNull { it.slot == slot }?.existingSave ?: return
         viewModelScope.launch {
-            runCatching { session.saveAs(target.saveId) }
+            runCatching { simulation.saveAs(target.saveId) }
                 .onSuccess { onDone(target.saveId) }
         }
     }
@@ -105,7 +101,7 @@ class SaveGameViewModel(
                 guildName = name
             ) }
                 .onSuccess { newSave ->
-                    runCatching { session.saveAs(newSave.saveId) }
+                    runCatching { simulation.saveAs(newSave.saveId) }
                         .onSuccess { onDone(newSave.saveId) }
                         .onFailure { e -> _state.update { it.copy(errorMessage = e.message ?: "Failed to create file") } }
                 }
@@ -120,7 +116,7 @@ class SaveGameViewModel(
         onDone: (Long) -> Unit,
     ) {
         viewModelScope.launch {
-            runCatching { session.saveAs(targetSaveId) }
+            runCatching { simulation.saveAs(targetSaveId) }
                 .onSuccess {
                     _state.update {
                         it.copy(

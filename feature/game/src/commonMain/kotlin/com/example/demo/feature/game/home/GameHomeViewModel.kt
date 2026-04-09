@@ -2,13 +2,10 @@ package com.example.demo.feature.game.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.demo.core.simulation.SimulationEngine
 import com.example.demo.domain.model.tasks.TaskTemplate
 import com.example.demo.domain.model.worldsave.CharacterMeta
 import com.example.demo.domain.model.worldsave.WorldSave
-import com.example.demo.domain.usecases.CreateNewCharacterMetaUseCase
-import com.example.demo.domain.usecases.LoadGuildSaveFileUseCase
-import com.example.demo.domain.usecases.SaveGuildFileUseCase
-import com.example.demo.feature.game.di.GameSessionStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -28,7 +25,7 @@ data class NewCharacterMetaViewState(
     val name: String = ""
 )
 class GameHomeViewModel(
-    private val session: GameSessionStore
+    private val simulation: SimulationEngine
 ) : ViewModel() {
 
     private var _state = MutableStateFlow(GameHomeViewState(isLoading = true))
@@ -36,12 +33,12 @@ class GameHomeViewModel(
 
     init {
         viewModelScope.launch {
-            runCatching { session.refresh() }
+            runCatching { simulation.refreshFromDb() }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load save") }}
         }
 
         viewModelScope.launch {
-            session.worldSave.collect { worldSave ->
+            simulation.worldSave.collect { worldSave ->
                 _state.update { it.copy(worldSave = worldSave) }
             }
         }
@@ -53,14 +50,12 @@ class GameHomeViewModel(
 
     fun createNewCharacterMeta() {
         val newCharacterMeta = _state.value.newCharacterMeta
-        _state.update { it.copy(isLoading = true) }
-        viewModelScope.launch {
-            runCatching { session.createCharacter(newCharacterMeta.name) }
-                .onFailure { e ->
-                    _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to create new character") }
-                }
-
+        _state.update {
+            it.copy(isLoading = true)
         }
+        runCatching { simulation.updateCharacterMeta(CharacterMeta(newCharacterMeta.name)) }
+            .onSuccess { _state.update { it.copy(isLoading = false, errorMessage = null) } }
+            .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to create new character") } }
     }
 
     fun onToastMessageConsumed() {
@@ -69,6 +64,6 @@ class GameHomeViewModel(
 
     fun startTask(template: TaskTemplate) {
         val newTask = template.instantiate()
-        session.addActiveTask(newTask)
+        simulation.addActiveTask(newTask)
     }
 }

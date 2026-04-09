@@ -29,6 +29,7 @@ kotlin {
 
             implementation(projects.core.ui)
             implementation(projects.core.domain)
+            implementation(projects.core.simulation)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)

@@ -5,5 +5,4 @@ import com.example.demo.domain.model.tasks.Task
 
 data class CharacterData(
     val skills: List<CharacterStatData>,
-    val activeTasks: List<Task>
 )
