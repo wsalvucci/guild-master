@@ -1,0 +1,16 @@
+CREATE TABLE WorldFlags (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    flag_key TEXT NOT NULL UNIQUE,
+    enabled INTEGER NOT NULL
+);
+
+selectAllFlags:
+SELECT * FROM WorldFlags;
+
+upsertFlag:
+INSERT INTO WorldFlags(flag_key, enabled)
+VALUES (?, ?)
+ON CONFLICT(flag_key) DO UPDATE SET enabled = excluded.enabled;
+
+selectFlag:
+SELECT * FROM WorldFlags WHERE flag_key = ?;

@@ -1,0 +1,17 @@
+CREATE TABLE Guild (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+selectAll:
+SELECT * FROM Guild;
+
+insert:
+INSERT INTO Guild(username, created_at) VALUES (?, ?);
+
+deleteById:
+DELETE FROM Guild WHERE id = ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

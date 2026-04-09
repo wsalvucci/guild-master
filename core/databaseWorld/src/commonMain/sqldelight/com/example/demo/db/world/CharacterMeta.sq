@@ -1,0 +1,10 @@
+CREATE TABLE CharacterMeta (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+
+createNewCharacter:
+INSERT INTO CharacterMeta (name) VALUES (?);
+
+getCharacter:
+SELECT * FROM CharacterMeta LIMIT 1;

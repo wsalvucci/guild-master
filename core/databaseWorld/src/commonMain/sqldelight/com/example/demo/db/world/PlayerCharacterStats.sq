@@ -1,0 +1,14 @@
+CREATE TABLE PlayerCharacterStats (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,
+    level INTEGER NOT NULL,
+    experience INTEGER NOT NULL
+);
+
+getAll:
+SELECT * FROM PlayerCharacterStats;
+
+upsertSkill:
+INSERT INTO PlayerCharacterStats(key, level, experience)
+VALUES (?, ?, ?)
+ON CONFLICT(key) DO UPDATE SET level = excluded.level, experience = excluded.experience;
