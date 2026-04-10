@@ -37,6 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.demo.domain.model.items.Item
+import com.example.demo.domain.model.items.QualityItem
 import com.example.demo.domain.model.tasks.PermanentTasks
 import com.example.demo.domain.model.tasks.Task
 import com.example.demo.domain.model.tasks.TaskCategory
@@ -47,12 +49,15 @@ import com.example.demo.domain.util.formatSaveTimestamp
 import com.example.demo.feature.game.utils.getSkillIcon
 import com.example.demo.ui.theme.DemoTheme
 import org.jetbrains.compose.resources.painterResource
+import kotlin.math.floor
 import kotlin.time.Clock
 
 @Composable
 fun WorkshopScreen(
     activeTasks: List<Task>,
+    storageItems: List<Item>,
     startTask: (TaskTemplate) -> Unit,
+    collectTask: (Task) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var backpackVisible by remember { mutableStateOf(false) }
@@ -76,17 +81,49 @@ fun WorkshopScreen(
             }
         }
         Column(
-            modifier = modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Active Task")
+            Text(
+                text = "Active Tasks",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
             Column(
-
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 activeTasks.forEach { task ->
-                    Column {
-                        Text(task.name)
-                        Text(task.uuid)
-                        Text(formatSaveTimestamp(task.startedAt.times(1000)))
+                    Column(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(16.dp)
+                            .clickable {
+                                if (task.workCompleted >= task.totalWork) { collectTask(task) }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(task.name)
+                            if (task.workCompleted >= task.totalWork) {
+                                Text(
+                                    text = "TAP TO COLLECT",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier.background(Color(0xFFAA3333))
+                                    .padding(horizontal = 4.dp),
+                            ) {
+                                Text(
+                                    text = task.totalWork.toString() + " WORK",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -96,17 +133,23 @@ fun WorkshopScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth((task.workCompleted / task.totalWork).toFloat())
-                                    .height(5.dp)
                                     .background(MaterialTheme.colorScheme.secondaryContainer)
                             ) {
-
+                                Text(
+                                    text = floor(task.workCompleted).toInt().toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
                         }
                     }
                 }
             }
 
-            Text("Available Tasks")
+            Text(
+                text = "Available Tasks",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
             LazyColumn {
                 items(PermanentTasks.allTasks.toList()) { (name, task) ->
                     Box(
@@ -215,6 +258,7 @@ fun WorkshopScreen(
             }
         }
         BackpackSubScreen(
+            storageItems = storageItems,
             visible = backpackVisible,
             close = { backpackVisible = false },
         )
@@ -223,9 +267,11 @@ fun WorkshopScreen(
 
 @Composable
 fun BackpackSubScreen(
+    storageItems: List<Item>,
     visible: Boolean,
     close: () -> Unit,
 ) {
+    val chunkedItems = storageItems.chunked(4)
     AnimatedVisibility(
         visible = visible,
         enter = slideInHorizontally(
@@ -241,12 +287,13 @@ fun BackpackSubScreen(
             Column {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 ) {
                     Text(
                         text = "<",
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxHeight().width(80.dp).clickable { close() }
+                        modifier = Modifier.width(80.dp).clickable { close() }
                     )
                     Text(
                         text = "BACKPACK",
@@ -254,10 +301,31 @@ fun BackpackSubScreen(
                         textAlign = TextAlign.Center,
                     )
                     Box(
-                        modifier = Modifier.fillMaxHeight().width(80.dp)
+                        modifier = Modifier.width(80.dp)
                     ) {}
                 }
                 HorizontalDivider()
+                Column {
+                    chunkedItems.forEach { itemRow ->
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            itemRow.forEach { item ->
+                                Column {
+                                    Text(
+                                        text = item.name,
+                                    )
+                                    if (item is QualityItem) {
+                                        Text(
+                                            text = item.itemQuality.toString()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -317,6 +385,8 @@ fun TasksScreenPreview() {
     ) {
         WorkshopScreen(
             startTask = {},
+            collectTask = {},
+            storageItems = emptyList(),
             activeTasks = listOf(
                 Task(
                     uuid = "UUID",
@@ -325,9 +395,25 @@ fun TasksScreenPreview() {
                     description = "Tast Description",
                     category = TaskCategory.Production.Mining,
                     reqStatLevels = emptyList(),
-                    workPerTick = 0.0,
+                    workPerSecond = 0.0,
                     totalWork = 10.0,
                     workCompleted = 3.0,
+                    tags = emptyList(),
+                    reqItems = emptyList(),
+                    outputItems = emptyList(),
+                    experienceGain = emptyList(),
+                    isBackground = false
+                ),
+                Task(
+                    uuid = "UUID",
+                    name = "Task 2",
+                    startedAt = Clock.System.now().epochSeconds,
+                    description = "Tast Description",
+                    category = TaskCategory.Production.Mining,
+                    reqStatLevels = emptyList(),
+                    workPerSecond = 0.0,
+                    totalWork = 10.0,
+                    workCompleted = 10.0,
                     tags = emptyList(),
                     reqItems = emptyList(),
                     outputItems = emptyList(),

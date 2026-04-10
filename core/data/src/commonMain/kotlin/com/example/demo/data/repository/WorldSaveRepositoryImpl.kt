@@ -92,6 +92,7 @@ class WorldSaveRepositoryImpl(
                                 experience = 0L
                             )
                     },
+                storage = emptyList(), // TODO
             ),
             activeTasks = emptyList(), // TODO
             // TODO

@@ -17,6 +17,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
@@ -55,39 +56,31 @@ class SimulationEngine(
     // SIMULATION ENGINE
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
-    private val _tickInterval = MutableStateFlow(1.seconds)
-    val tickInterval = _tickInterval.asStateFlow()
-
     private var loopJob: Job? = null
-    private var tickIndex: Long = 0L
+    private var simTickRate: Duration = 17.milliseconds
 
-    fun setTickInterval(tickInterval: Duration) {
-        require(tickInterval.isPositive()) { "Tick interval must be positive" }
-        _tickInterval.value = tickInterval
-    }
-
-    fun start(worldSave: WorldSave) {
+    fun start() {
         if (loopJob?.isActive == true) return
 
         loopJob = scope.launch {
             val mark = TimeSource.Monotonic.markNow()
+            var last = mark.elapsedNow()
 
             while (isActive) {
-                val interval = _tickInterval.value
-                val nextTick = tickIndex + 1
-                val targetElapsed = interval.times(nextTick.toInt())
-                val delayFor = targetElapsed - mark.elapsedNow()
-
-                if (delayFor.isPositive()) delay(delayFor)
-
-                tickIndex = nextTick
-
+                val now = mark.elapsedNow()
+                val diff = now - last
+                if (diff >= simTickRate) {
+                    simActiveTasks(simDelta = diff)
+                    last = now
+                } else {
+                    delay(simTickRate - diff)
+                }
             }
         }
     }
 
     fun stop() {
-
+        loopJob?.cancel()
     }
 
 
@@ -105,6 +98,45 @@ class SimulationEngine(
             if (current == null) return@update null
             current.copy(
                 activeTasks = current.activeTasks.plus(task),
+            )
+        }
+    }
+
+    fun collectTask(task: Task) {
+        _worldSave.update { current ->
+            if (current == null) return@update null
+            current.copy(
+                activeTasks = current.activeTasks.filter { it.uuid != task.uuid },
+                characterData = current.characterData.copy(
+                    storage = current.characterData.storage.plus(
+                        task.outputItems.flatMap { outItem -> List(outItem.quantity) { outItem.item } }
+                    )
+                )
+            )
+        }
+    }
+
+    private val activeTaskInterval = 1.seconds
+    private fun simActiveTasks(
+        simDelta: Duration
+    ) {
+        val activeTasks = _worldSave.value?.activeTasks ?: return
+        val runningTasks = activeTasks.filter { task ->
+            true // TODO: Filter on tasks w/ active characters working on them
+        }
+
+        val notRunningTasks = activeTasks.filter { task ->
+            false // TODO: Filter on tasks w/o active characters working on them
+        }
+
+        val updatedRunning = runningTasks.map { task ->
+            val increment = task.workPerSecond.times(simDelta.div(activeTaskInterval))
+            task.copy(workCompleted = minOf(task.workCompleted + increment, task.totalWork))
+        }
+
+        _worldSave.update { current ->
+            current?.copy(
+                activeTasks = updatedRunning.plus(notRunningTasks)
             )
         }
     }

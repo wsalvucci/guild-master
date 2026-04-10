@@ -179,6 +179,7 @@ private fun StatsScreenPreview() {
                         experience = 7
                     ),
                 ),
+                storage = emptyList(),
             )
         )
     }

@@ -23,7 +23,10 @@ class MainGameViewModel(
     init {
         viewModelScope.launch {
             runCatching { simulation.refreshFromDb() }
-                .onSuccess { _state.update { GameSessionState.Ready } }
+                .onSuccess {
+                    _state.update { GameSessionState.Ready }
+                    simulation.start()
+                }
                 .onFailure { e -> _state.update { GameSessionState.Error(e.message ?: "") } }
         }
     }

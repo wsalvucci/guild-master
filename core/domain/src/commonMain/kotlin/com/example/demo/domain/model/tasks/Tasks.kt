@@ -32,7 +32,7 @@ data class TaskTemplate(
             description = description,
             category = category,
             reqStatLevels = reqStatLevels,
-            workPerTick = workPerTick,
+            workPerSecond = workPerTick,
             totalWork = totalWork,
             workCompleted = 0.0,
             tags = tags,
@@ -49,7 +49,7 @@ data class TaskTemplate(
  * @param name The task name
  * @param description The task description
  * @param reqStatLevels The list of stats required for the task and their minimum levels
- * @param workPerTick The amount of work done per simulation tick
+ * @param workPerSecond The amount of work done per simulation tick
  * @param tags The list of tags associated with the task
  * @param reqItems The items required for the task and their required quantities and properties
  * @param outputItems The items earned for completing the task and their quantities and properties
@@ -63,7 +63,7 @@ data class Task(
     val description: String,
     val category: TaskCategory,
     val reqStatLevels: List<ReqStatData>,
-    val workPerTick: Double,
+    val workPerSecond: Double,
     val totalWork: Double,
     val workCompleted: Double,
     val tags: List<TaskTag>,

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.demo.domain.model.tasks.Task
 import com.example.demo.domain.model.tasks.TaskTemplate
 import com.example.demo.domain.theme.AppThemeId
 import com.example.demo.domain.theme.ThemeMode
@@ -85,7 +86,8 @@ fun GameHomeRoot(
         onUpdateNewCharacterMetaName = viewModel::updateNewCharacterMetaName,
         onNewCharacterMetaCreated = viewModel::createNewCharacterMeta,
         toastMessageConsumed = viewModel::onToastMessageConsumed,
-        onStartTask = viewModel::startTask
+        onStartTask = viewModel::startTask,
+        onCollectTask = viewModel::collectTask,
     )
 }
 
@@ -128,6 +130,7 @@ fun GameHomeScreen(
    onNewCharacterMetaCreated: () -> Unit,
    toastMessageConsumed: () -> Unit,
    onStartTask: (TaskTemplate) -> Unit,
+   onCollectTask: (Task) -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -213,6 +216,8 @@ fun GameHomeScreen(
                     WorkshopScreen(
                         activeTasks = state.worldSave?.activeTasks ?: emptyList(),
                         startTask = onStartTask,
+                        collectTask = onCollectTask,
+                        storageItems = state.worldSave?.characterData?.storage ?: emptyList(),
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -407,7 +412,8 @@ private fun GameHomeScreenPreview() {
             onUpdateNewCharacterMetaName = {},
             onNewCharacterMetaCreated = {},
             toastMessageConsumed = {},
-            onStartTask = {}
+            onStartTask = {},
+            onCollectTask = {},
         )
     }
 }

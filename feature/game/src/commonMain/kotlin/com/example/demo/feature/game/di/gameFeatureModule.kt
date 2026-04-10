@@ -7,6 +7,7 @@ import com.example.demo.feature.game.home.GameHomeViewModel
 import com.example.demo.feature.game.saveGame.SaveGameViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import org.koin.dsl.onClose
 
 data class GameSessionSource(
     val saveId: Long
@@ -25,6 +26,8 @@ val gameFeatureModule = module {
                 loadGuildSaveFileUseCase = get(),
                 saveGuildFileUseCase = get(),
             )
+        } onClose {
+            it?.stop()
         }
 
         viewModel {

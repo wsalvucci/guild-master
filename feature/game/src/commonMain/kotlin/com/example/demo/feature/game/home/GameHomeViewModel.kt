@@ -3,6 +3,7 @@ package com.example.demo.feature.game.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.demo.core.simulation.SimulationEngine
+import com.example.demo.domain.model.tasks.Task
 import com.example.demo.domain.model.tasks.TaskTemplate
 import com.example.demo.domain.model.worldsave.CharacterMeta
 import com.example.demo.domain.model.worldsave.WorldSave
@@ -65,5 +66,9 @@ class GameHomeViewModel(
     fun startTask(template: TaskTemplate) {
         val newTask = template.instantiate()
         simulation.addActiveTask(newTask)
+    }
+
+    fun collectTask(task: Task) {
+        simulation.collectTask(task)
     }
 }
