@@ -22,6 +22,8 @@ import com.example.demo.domain.model.skills.CharacterStat
 import com.example.demo.domain.model.skills.CharacterStatData
 import com.example.demo.domain.theme.AppThemeId
 import com.example.demo.domain.theme.ThemeMode
+import com.example.demo.domain.util.pctThroughCurrentLevel
+import com.example.demo.domain.util.xpToLevel
 import com.example.demo.domain.util.xpToNextLevel
 import com.example.demo.feature.game.utils.getSkillIcon
 import com.example.demo.ui.theme.DemoTheme
@@ -103,7 +105,7 @@ private fun SkillItem(
                     )
                     Text(data.skill.name)
                 }
-                Text("Lv. " + data.level.toString())
+                Text("Lv. " + xpToLevel(data.experience))
             }
             Box(
                 modifier = Modifier
@@ -113,9 +115,9 @@ private fun SkillItem(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(data.experience / xpToNextLevel(data.level).toFloat())
+                        .fillMaxWidth(pctThroughCurrentLevel(data.experience).toFloat())
                         .height(5.dp)
-                        .background(color = MaterialTheme.colorScheme.surface)
+                        .background(color = MaterialTheme.colorScheme.secondaryContainer)
                 )
             }
             Row(
@@ -124,7 +126,7 @@ private fun SkillItem(
             ) {
                 Text("Status...")
                 Row {
-                    Text(data.experience.toString() + "/" + xpToNextLevel(data.level).toString())
+                    Text(data.experience.toString() + "/" + xpToNextLevel(data.experience).toString())
                 }
             }
         }
@@ -162,11 +164,12 @@ private fun StatsScreenPreview() {
     ) {
         StatsScreen(
             stats = CharacterData(
+                uuid = "uuid",
                 skills = listOf(
                     CharacterStatData(
                         skill = CharacterStat.Mining,
                         level = 1,
-                        experience = 3
+                        experience = 32
                     ),
                     CharacterStatData(
                         skill = CharacterStat.Smithing,

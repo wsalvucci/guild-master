@@ -10,6 +10,7 @@ enum class CharacterStatKeys {
     MINING,
     STAMINA,
     SMITHING,
+    WOODCUTTING,
     UNKNOWN;
 
     companion object {
@@ -18,6 +19,7 @@ enum class CharacterStatKeys {
                 "mining" -> MINING
                 "stamina" -> STAMINA
                 "smithing" -> SMITHING
+                "woodcutting" -> WOODCUTTING
                 else -> UNKNOWN
             }
         }
@@ -27,6 +29,7 @@ enum class CharacterStatKeys {
                 MINING -> "mining"
                 STAMINA -> "stamina"
                 SMITHING -> "smithing"
+                WOODCUTTING -> "woodcutting"
                 else -> "unknown"
             }
         }
@@ -54,6 +57,12 @@ sealed class CharacterStat() {
         override val key = CharacterStatKeys.STAMINA
         override val name = "Stamina"
         override val type = StatType.Combat
+    }
+
+    data object Woodcutting: CharacterStat() {
+        override val key = CharacterStatKeys.WOODCUTTING
+        override val name = "Woodcutting"
+        override val type = StatType.Production
     }
 
     data object Unknown: CharacterStat() {

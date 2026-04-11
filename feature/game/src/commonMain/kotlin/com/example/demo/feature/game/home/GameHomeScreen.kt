@@ -49,14 +49,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.demo.domain.model.tasks.Task
-import com.example.demo.domain.model.tasks.TaskTemplate
 import com.example.demo.domain.theme.AppThemeId
 import com.example.demo.domain.theme.ThemeMode
 import com.example.demo.domain.util.formatSaveTimestamp
 import com.example.demo.feature.game.home.stats.StatsScreen
-import com.example.demo.feature.game.home.tasks.WorkshopScreen
+import com.example.demo.feature.game.home.tasks.WorkshopScreenRoot
 import com.example.demo.ui.theme.LocalThemeController
 import com.example.demo.ui.theme.PreviewThemeController
 import demo.feature.game.generated.resources.Home
@@ -86,8 +83,14 @@ fun GameHomeRoot(
         onUpdateNewCharacterMetaName = viewModel::updateNewCharacterMetaName,
         onNewCharacterMetaCreated = viewModel::createNewCharacterMeta,
         toastMessageConsumed = viewModel::onToastMessageConsumed,
-        onStartTask = viewModel::startTask,
-        onCollectTask = viewModel::collectTask,
+        workshopScreen = { modifier ->
+            WorkshopScreenRoot(
+                gameScope = gameScope,
+                startTask = viewModel::startTask,
+                collectTask = viewModel::collectTask,
+                modifier = modifier,
+            )
+        }
     )
 }
 
@@ -123,14 +126,13 @@ val PRIMARY_NAV_MAP = mapOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameHomeScreen(
-   state: GameHomeViewState,
-   backNav: () -> Unit,
-   onSaveAsClicked: () -> Unit,
-   onUpdateNewCharacterMetaName: (String) -> Unit,
-   onNewCharacterMetaCreated: () -> Unit,
-   toastMessageConsumed: () -> Unit,
-   onStartTask: (TaskTemplate) -> Unit,
-   onCollectTask: (Task) -> Unit
+    state: GameHomeViewState,
+    backNav: () -> Unit,
+    onSaveAsClicked: () -> Unit,
+    onUpdateNewCharacterMetaName: (String) -> Unit,
+    onNewCharacterMetaCreated: () -> Unit,
+    toastMessageConsumed: () -> Unit,
+    workshopScreen: @Composable (Modifier) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -151,11 +153,6 @@ fun GameHomeScreen(
             TopAppBar(
                 title = {
                     Text("Save File: ${state.worldSave?.header?.saveId}")
-                },
-                navigationIcon = {
-                    IconButton(onClick = backNav) {
-                        Text("<")
-                    }
                 }
             )
         },
@@ -213,13 +210,7 @@ fun GameHomeScreen(
                     )
                 }
                 1 -> {
-                    WorkshopScreen(
-                        activeTasks = state.worldSave?.activeTasks ?: emptyList(),
-                        startTask = onStartTask,
-                        collectTask = onCollectTask,
-                        storageItems = state.worldSave?.characterData?.storage ?: emptyList(),
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    workshopScreen(Modifier.padding(innerPadding))
                 }
                 2 -> {
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -236,6 +227,7 @@ fun GameHomeScreen(
                     SettingsScreen(
                         onSaveAsClicked = onSaveAsClicked,
                         isSaving = state.isSaving,
+                        exitSave = backNav,
                         modifier = Modifier.padding(innerPadding),
                     )
                 }
@@ -297,7 +289,10 @@ private fun MainNavButton(
                 contentDescription = "Home Star Icon",
                 modifier = Modifier.size(20.dp)
             )
-            Text(text = title)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
@@ -307,6 +302,7 @@ private fun MainNavButton(
 private fun SettingsScreen(
     onSaveAsClicked: () -> Unit,
     isSaving: Boolean,
+    exitSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val theme = LocalThemeController.current
@@ -395,6 +391,18 @@ private fun SettingsScreen(
         ) {
             Text("Save Game")
         }
+
+        TextButton(
+            onClick = exitSave,
+            enabled = !isSaving,
+            modifier = Modifier.fillMaxWidth().border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(4.dp)
+            ),
+        ) {
+            Text("Exit Game")
+        }
     }
 }
 
@@ -412,8 +420,6 @@ private fun GameHomeScreenPreview() {
             onUpdateNewCharacterMetaName = {},
             onNewCharacterMetaCreated = {},
             toastMessageConsumed = {},
-            onStartTask = {},
-            onCollectTask = {},
         )
     }
 }

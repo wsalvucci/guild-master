@@ -4,6 +4,7 @@ import com.example.demo.core.simulation.SimulationEngine
 import com.example.demo.domain.util.SimulationThread
 import com.example.demo.feature.game.MainGameViewModel
 import com.example.demo.feature.game.home.GameHomeViewModel
+import com.example.demo.feature.game.home.tasks.WorkshopViewModel
 import com.example.demo.feature.game.saveGame.SaveGameViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -25,6 +26,7 @@ val gameFeatureModule = module {
                 dispatcher = thread.dispatcher,
                 loadGuildSaveFileUseCase = get(),
                 saveGuildFileUseCase = get(),
+                autoSaveGuildFileUseCase = get(),
             )
         } onClose {
             it?.stop()
@@ -39,6 +41,12 @@ val gameFeatureModule = module {
         viewModel {
             GameHomeViewModel(
                 simulation = get()
+            )
+        }
+
+        viewModel {
+            WorkshopViewModel(
+                simulationEngine = get()
             )
         }
 

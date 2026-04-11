@@ -1,0 +1,18 @@
+CREATE TABLE CharacterData (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    uuid TEXT NOT NULL UNIQUE
+);
+
+getAllCharacters:
+SELECT * FROM CharacterData;
+
+getCharacterByDbId:
+SELECT * FROM CharacterData WHERE id = ?;
+
+getCharacterByUuid:
+SELECT * FROM CharacterData WHERE uuid = ?;
+
+upsertCharacter:
+INSERT INTO CharacterData (uuid)
+VALUES (?)
+ON CONFLICT(uuid) DO NOTHING;

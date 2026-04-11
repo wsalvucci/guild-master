@@ -3,6 +3,7 @@ package com.example.demo.domain.model.tasks
 import com.example.demo.domain.model.items.OutputItemData
 import com.example.demo.domain.model.items.ReqItemData
 import com.example.demo.domain.model.skills.CharacterStat
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -35,6 +36,7 @@ data class TaskTemplate(
             workPerSecond = workPerTick,
             totalWork = totalWork,
             workCompleted = 0.0,
+            workCompetedPerCharacter = emptyList(),
             tags = tags,
             reqItems = reqItems,
             outputItems = outputItems,
@@ -66,6 +68,7 @@ data class Task(
     val workPerSecond: Double,
     val totalWork: Double,
     val workCompleted: Double,
+    val workCompetedPerCharacter: List<Pair<Double, String>>,
     val tags: List<TaskTag>,
     val reqItems: List<ReqItemData>,
     val outputItems: List<OutputItemData>,
@@ -144,6 +147,11 @@ sealed class TaskCategory {
         data object Mining : Production() {
             override val name: String = "Mining"
             override val subKey = "mining"
+        }
+
+        data object Woodcutting : Production() {
+            override val name: String = "Woodcutting"
+            override val subKey: String = "woodcutting"
         }
     }
 }

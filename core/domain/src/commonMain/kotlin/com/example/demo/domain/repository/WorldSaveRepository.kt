@@ -15,6 +15,7 @@ interface WorldSaveRepository {
     suspend fun deleteWorldFile(saveId: Long)
 
     suspend fun createNewCharacterMeta(
+        characterUuid: String,
         name: String
     )
 }

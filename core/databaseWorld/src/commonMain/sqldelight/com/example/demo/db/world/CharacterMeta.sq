@@ -1,10 +1,16 @@
 CREATE TABLE CharacterMeta (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    characterUuid TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL
 );
 
 createNewCharacter:
-INSERT INTO CharacterMeta (name) VALUES (?);
+INSERT INTO CharacterMeta (characterUuid, name) VALUES (?, ?);
+
+upsertCharacterMeta:
+INSERT INTO CharacterMeta(characterUuid, name)
+VALUES (?, ?)
+ON CONFLICT(characterUuid) DO UPDATE SET name = excluded.name;
 
 getCharacter:
 SELECT * FROM CharacterMeta LIMIT 1;

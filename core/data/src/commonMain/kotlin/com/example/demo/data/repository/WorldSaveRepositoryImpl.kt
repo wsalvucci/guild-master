@@ -5,6 +5,7 @@ import com.example.demo.db.world.PlayerCharacterStats
 import com.example.demo.db.world.WorldDatabaseFileManager
 import com.example.demo.db.world.WorldDatabaseManager
 import com.example.demo.domain.model.Guild
+import com.example.demo.domain.model.items.ItemCatalog
 import com.example.demo.domain.model.worldsave.CharacterData
 import com.example.demo.domain.model.skills.CharacterStat
 import com.example.demo.domain.model.skills.CharacterStatData
@@ -34,6 +35,9 @@ class WorldSaveRepositoryImpl(
         val db = worldDatabaseManager.requireDatabase()
 
         db.transaction {
+            db.characterDataQueries.upsertCharacter(
+                worldSave.characterData.uuid
+            )
             worldSave.flags.forEach { flag ->
                 db.worldFlagsQueries.upsertFlag(
                     flag_key = flag.key,
@@ -42,11 +46,46 @@ class WorldSaveRepositoryImpl(
             }
             worldSave.characterData.skills.forEach { skill ->
                 db.playerCharacterStatsQueries.upsertSkill(
+                    characterUuid = worldSave.characterData.uuid,
                     key = CharacterStatKeys.toString(skill.skill.key),
                     level = skill.level,
                     experience = skill.experience
                 )
             }
+            val meta = worldSave.characterMeta
+            if (meta != null) {
+                db.characterMetaQueries.upsertCharacterMeta(
+                    characterUuid = meta.characterUuid,
+                    name = meta.name
+                )
+            }
+        }
+        db.transaction {
+            // UPSERT ALL ITEMS
+            worldSave.characterData.storage.forEach { item ->
+                db.itemsQueries.upsertItem(
+                    uuid = item.uuid,
+                    itemTag = item.tag,
+                    quality = item.quality
+                )
+            }
+
+            // CLEAR CHARACTER INVENTORIES
+            db.characterInventoryQueries.clearCharacterInventory(worldSave.characterData.uuid)
+
+            // READ ITEMS TO INVENTORY FROM MEMORY
+            worldSave.characterData.storage.forEach { item ->
+                db.characterInventoryQueries.addToCharacterInventory(
+                    characterUuid = worldSave.characterData.uuid,
+                    itemUuid = item.uuid
+                )
+            }
+
+            // REMOVE ITEMS THAT ARE ORPHANS
+
+            // THIS NEEDS UPDATED PER TABLE THAT HOLDS ITEM INSTANCE REFERENCES
+            // OR ITEMS WILL BE LOST ON SAVE
+            db.itemsQueries.purgeOrphans()
         }
     }
 
@@ -66,8 +105,17 @@ class WorldSaveRepositoryImpl(
             }
 
         val characterMeta = db.characterMetaQueries.getCharacter().executeAsOneOrNull()
+        val playerCharacterData = db.characterDataQueries.getCharacterByUuid(characterMeta?.characterUuid ?: "").executeAsOneOrNull()
+        val playerCharacterStorage = db.characterInventoryQueries.getCharacterItems(characterMeta?.characterUuid ?: "").executeAsList()
+        val playerCharacterItems = db.itemsQueries.transactionWithResult {
+            playerCharacterStorage.mapNotNull { item ->
+                db.itemsQueries.getItem(item.itemUuid).executeAsOneOrNull()
+            }
+        }
 
-        val characterSkills = db.playerCharacterStatsQueries.getAll().executeAsList()
+        val characterSkills = db.playerCharacterStatsQueries.getCharacterStats(
+            characterUuid = playerCharacterData?.uuid ?: ""
+        ).executeAsList()
         val skillKeys = characterSkills.associateBy { it.key }
 
         val metaData = saveSlotRepository.getSaveSlot(saveId)
@@ -81,6 +129,7 @@ class WorldSaveRepositoryImpl(
             flags = flags,
             characterMeta = characterMeta?.toDomain(),
             characterData = CharacterData(
+                uuid = playerCharacterData?.uuid ?: "",
                 skills = CharacterStatKeys.entries
                     .filterNot { it == CharacterStatKeys.UNKNOWN }
                     .map { key ->
@@ -92,7 +141,13 @@ class WorldSaveRepositoryImpl(
                                 experience = 0L
                             )
                     },
-                storage = emptyList(), // TODO
+                storage = playerCharacterItems.mapNotNull { item ->
+                    val template = ItemCatalog.getByTagId(item.itemTag)
+                    template?.instantiate(
+                        uuid = item.uuid,
+                        quality = item.quality,
+                    )
+                }
             ),
             activeTasks = emptyList(), // TODO
             // TODO
@@ -120,17 +175,27 @@ class WorldSaveRepositoryImpl(
         worldDatabaseFileManager.deleteDatabase(saveId)
     }
 
-    override suspend fun createNewCharacterMeta(name: String) {
+    override suspend fun createNewCharacterMeta(
+        characterUuid: String,
+        name: String
+    ) {
         val db = worldDatabaseManager.requireDatabase()
 
-        db.characterMetaQueries.createNewCharacter(
-            name = name,
-        )
+        db.transaction {
+            db.characterMetaQueries.createNewCharacter(
+                characterUuid = characterUuid,
+                name = name,
+            )
+            db.characterDataQueries.upsertCharacter(
+                uuid = characterUuid,
+            )
+        }
     }
 }
 
 private fun CharacterMeta.toDomain(): com.example.demo.domain.model.worldsave.CharacterMeta =
     com.example.demo.domain.model.worldsave.CharacterMeta(
+        characterUuid = characterUuid,
         name = name,
     )
 

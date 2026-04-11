@@ -1,6 +1,6 @@
 package com.example.demo.domain.di
 
-import com.example.demo.domain.usecases.CreateNewCharacterMetaUseCase
+import com.example.demo.domain.usecases.AutoSaveGuildFileUseCase
 import com.example.demo.domain.usecases.CreateNewGuildSaveFileUseCase
 import com.example.demo.domain.usecases.DeleteGuildSaveFileUseCase
 import com.example.demo.domain.usecases.GetGuildSaveFilesUseCase
@@ -15,6 +15,6 @@ val useCaseModule = module {
     factory { OpenGuildSaveFileUseCase(get()) }
     factory { LoadGuildSaveFileUseCase(get()) }
     factory { SaveGuildFileUseCase(get(), get()) }
-    factory { CreateNewCharacterMetaUseCase(get()) }
     factory { DeleteGuildSaveFileUseCase(get(), get()) }
+    factory { AutoSaveGuildFileUseCase(get(), get()) }
 }

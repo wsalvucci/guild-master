@@ -1,8 +1,10 @@
 package com.example.demo.feature.game.home.tasks
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.Spring.StiffnessLow
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,10 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -37,49 +37,65 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.demo.domain.model.items.Item
-import com.example.demo.domain.model.items.QualityItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.demo.domain.model.items.ItemInstance
+import com.example.demo.domain.model.skills.CharacterStat
 import com.example.demo.domain.model.tasks.PermanentTasks
 import com.example.demo.domain.model.tasks.Task
 import com.example.demo.domain.model.tasks.TaskCategory
 import com.example.demo.domain.model.tasks.TaskTemplate
 import com.example.demo.domain.theme.AppThemeId
 import com.example.demo.domain.theme.ThemeMode
-import com.example.demo.domain.util.formatSaveTimestamp
+import com.example.demo.domain.util.roundToDecimals
 import com.example.demo.feature.game.utils.getSkillIcon
 import com.example.demo.ui.theme.DemoTheme
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.scope.Scope
 import kotlin.math.floor
+import kotlin.math.roundToInt
 import kotlin.time.Clock
+
+@Composable
+fun WorkshopScreenRoot(
+    gameScope: Scope,
+    startTask: (TaskTemplate) -> Unit,
+    collectTask: (Task) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel : WorkshopViewModel = koinViewModel(
+        scope = gameScope
+    )
+    val activeTasks by viewModel.activeTasks.collectAsStateWithLifecycle()
+    val storageItems by viewModel.storageItems.collectAsStateWithLifecycle()
+
+    WorkshopScreen(
+        activeTasks = activeTasks,
+        storageItems = storageItems,
+        startTask = startTask,
+        collectTask = collectTask,
+        modifier = modifier,
+    )
+}
+
+private enum class SubScreens {
+    MINING,
+    WOODCUTTING,
+    FISHING,
+    FARMING
+}
 
 @Composable
 fun WorkshopScreen(
     activeTasks: List<Task>,
-    storageItems: List<Item>,
+    storageItems: List<ItemInstance>,
     startTask: (TaskTemplate) -> Unit,
     collectTask: (Task) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var backpackVisible by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Box(
-            modifier = Modifier.fillMaxHeight()
-        ) {
-            Column(
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                WorkshopSubScreenButton(
-                    "B",
-                    Color(0xFFFFA700),
-                    open = { backpackVisible = !backpackVisible }
-                )
-                WorkshopSubScreenButton(
-                    "T",
-                    Color(0xFFC0C0C0),
-                    open = {}
-                )
-            }
-        }
+    var subscreenVisible by remember { mutableStateOf<SubScreens?>(null) }
+    Box(modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -89,17 +105,21 @@ fun WorkshopScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            Column(
+            LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                activeTasks.forEach { task ->
+                items(items = activeTasks, key = { it.uuid }) { task ->
                     Column(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(16.dp)
                             .clickable {
                                 if (task.workCompleted >= task.totalWork) { collectTask(task) }
-                            }
+                            }.
+                            animateItem(
+                                fadeInSpec = spring(stiffness = StiffnessLow),
+                                fadeOutSpec = spring(stiffness = StiffnessLow),
+                            )
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -145,13 +165,263 @@ fun WorkshopScreen(
                 }
             }
 
-            Text(
-                text = "Available Tasks",
-                textAlign = TextAlign.Center,
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                WorkshopMenuButton(
+                    name = "Backpack",
+                    color = Color(0xFFFFA700),
+                    open = { backpackVisible = !backpackVisible },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                WorkshopMenuDivider(
+                    name = "Raw Resources",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    WorkshopMenuButton(
+                        name = "Mining",
+                        color = Color(0xFFFFA700),
+                        open = { subscreenVisible = SubScreens.MINING },
+                        modifier = Modifier.weight(1f)
+                    )
+                    WorkshopMenuButton(
+                        name = "Woodcutting",
+                        color = Color(0xFFAA7722),
+                        open = {},
+                        modifier = Modifier.weight(1f)
+                    )
+                    WorkshopMenuButton(
+                        name = "Fishing",
+                        color = Color(0xFF22AAFF),
+                        open = {},
+                        modifier = Modifier.weight(1f)
+                    )
+                    WorkshopMenuButton(
+                        name = "Farming",
+                        color = Color(0xFF33BB33),
+                        open = {},
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                WorkshopMenuDivider(
+                    name = "Facilities",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    WorkshopMenuButton(
+                        name = "Workbench",
+                        color = Color(0xFFC0C0C0),
+                        open = {},
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+        BackpackSubScreen(
+            storageItems = storageItems,
+            visible = backpackVisible,
+            close = { backpackVisible = false },
+        )
+        RawResourceTaskList(
+            visible = subscreenVisible == SubScreens.MINING,
+            name = "MINING",
+            taskList = PermanentTasks.allTasks
+                .filter {
+                    it.value.category == TaskCategory.Production.Mining
+                }
+                .map {
+                    it.value
+                },
+            startTask = startTask,
+            close = { subscreenVisible = null }
+        )
+        RawResourceTaskList(
+            visible = subscreenVisible == SubScreens.WOODCUTTING,
+            name = "WOODCUTTING",
+            taskList = PermanentTasks.allTasks
+                .filter {
+                    it.value.category == TaskCategory.Production.Woodcutting
+                }
+                .map {
+                    it.value
+                },
+            startTask = startTask,
+            close = { subscreenVisible = null }
+        )
+    }
+}
+
+@Composable
+fun WorkshopMenuDivider(
+    name: String,
+    modifier: Modifier,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant).height(1.dp).weight(1f)
+        )
+        Text(
+            text = name,
+        )
+        Box(
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant).height(1.dp).weight(1f)
+        )
+    }
+}
+
+@Composable
+fun WorkshopMenuButton(
+    name: String,
+    color: Color,
+    open: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(color)
+            .clickable { open() }
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun BackpackSubScreen(
+    storageItems: List<ItemInstance>,
+    visible: Boolean,
+    close: () -> Unit,
+) {
+    val groupedItems = storageItems.groupBy { it.name }.toList()
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { it },
+        ),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "BACKPACK",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(0.1f).padding(vertical = 4.dp)
+                )
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.9f)
+                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                ) {
+                    groupedItems.forEach { item ->
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text =
+                                if (item.second.size > 1) {
+                                    "${item.first} (${item.second.size})"
+                                } else {
+                                    item.first
+                                }
+                            )
+                            Text(
+                                text =
+                                    item
+                                        .second
+                                        .minOf { it.quality ?: 0.0 }
+                                        .roundToDecimals(2)
+                                        .toString()
+                                            + "-" +
+                                            item
+                                                .second
+                                                .maxOf { it.quality ?: 0.0 }
+                                                .roundToDecimals(2)
+                                                .toString()
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(vertical = 4.dp)
+                        .clickable {
+                            close()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "CLOSE",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RawResourceTaskList(
+    visible: Boolean,
+    name: String,
+    taskList: List<TaskTemplate>,
+    startTask: (TaskTemplate) -> Unit,
+    close: () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { it },
+        ),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier.fillMaxWidth()
-            )
-            LazyColumn {
-                items(PermanentTasks.allTasks.toList()) { (name, task) ->
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+            ) {
+                items(taskList) { task ->
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceContainer)
@@ -166,7 +436,7 @@ fun WorkshopScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = name.uppercase(),
+                                        text = task.name.uppercase(),
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                     Text(
@@ -189,7 +459,9 @@ fun WorkshopScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                    Row {
+                                    Row(
+                                        modifier = Modifier.weight(0.5f)
+                                    ) {
                                         task.reqStatLevels.forEach { reqStatData ->
                                             Row(
                                                 modifier = Modifier
@@ -222,16 +494,34 @@ fun WorkshopScreen(
                                         modifier = Modifier.border(
                                             width = 0.5.dp,
                                             color = MaterialTheme.colorScheme.secondaryContainer
-                                        ).background(MaterialTheme.colorScheme.background)
+                                        ).background(MaterialTheme.colorScheme.background).weight(0.5f)
                                     ) {
                                         task.outputItems.forEach { outputItem ->
                                             Box(
                                                 modifier = Modifier.padding(horizontal = 4.dp)
                                             ) {
                                                 Text(
-                                                    text = outputItem.item.name + " x" + outputItem.quantity.toString(),
+                                                    text = outputItem.itemTemplate.name + " x" + outputItem.quantity.toString(),
                                                     style = MaterialTheme.typography.bodySmall,
                                                 )
+                                            }
+                                        }
+                                        HorizontalDivider()
+                                        task.experienceGain.forEach { experienceGain ->
+                                            Box(
+                                                modifier = Modifier.padding(horizontal = 4.dp)
+                                            ) {
+                                                Row {
+                                                    Image(
+                                                        painter = painterResource(experienceGain.second.getSkillIcon()),
+                                                        contentDescription = experienceGain.second.name,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Text(
+                                                        text =  "+" + experienceGain.first.toString() + "xp",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -244,131 +534,30 @@ fun WorkshopScreen(
                                     .background(MaterialTheme.colorScheme.secondaryContainer)
                                     .clickable {
                                         startTask(task)
+                                        close()
                                     }
                             ) {
                                 Text(
                                     text = "START",
                                     textAlign = TextAlign.Center,
                                     style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
                         }
                     }
                 }
             }
-        }
-        BackpackSubScreen(
-            storageItems = storageItems,
-            visible = backpackVisible,
-            close = { backpackVisible = false },
-        )
-    }
-}
-
-@Composable
-fun BackpackSubScreen(
-    storageItems: List<Item>,
-    visible: Boolean,
-    close: () -> Unit,
-) {
-    val chunkedItems = storageItems.chunked(4)
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInHorizontally(
-            initialOffsetX = { -it },
-        ),
-        exit = slideOutHorizontally(
-            targetOffsetX = { -it },
-        )
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)
-        ) {
-            Column {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "<",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.width(80.dp).clickable { close() }
-                    )
-                    Text(
-                        text = "BACKPACK",
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                    )
-                    Box(
-                        modifier = Modifier.width(80.dp)
-                    ) {}
-                }
-                HorizontalDivider()
-                Column {
-                    chunkedItems.forEach { itemRow ->
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            itemRow.forEach { item ->
-                                Column {
-                                    Text(
-                                        text = item.name,
-                                    )
-                                    if (item is QualityItem) {
-                                        Text(
-                                            text = item.itemQuality.toString()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth().clickable { close() }
+            ) {
+                Text(
+                    text = "CLOSE",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
             }
         }
-    }
-}
-
-@Composable
-fun WorkshopSubScreenButton(
-    text: String, // TODO: Swap for icon
-    color: Color,
-    open: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .background(color = color)
-            .clip(
-                RoundedCornerShape(
-                    topStart = CornerSize(0.dp),
-                    topEnd = CornerSize(4.dp),
-                    bottomEnd = CornerSize(4.dp),
-                    bottomStart = CornerSize(0.dp)
-                )
-            )
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                shape = RoundedCornerShape(
-                    topStart = CornerSize(0.dp),
-                    topEnd = CornerSize(4.dp),
-                    bottomEnd = CornerSize(4.dp),
-                    bottomStart = CornerSize(0.dp)
-                )
-            )
-            .clickable {
-                open()
-            }
-        ,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 
@@ -386,10 +575,12 @@ fun TasksScreenPreview() {
         WorkshopScreen(
             startTask = {},
             collectTask = {},
-            storageItems = emptyList(),
+            storageItems = listOf(
+
+            ),
             activeTasks = listOf(
                 Task(
-                    uuid = "UUID",
+                    uuid = "UUID 1",
                     name = "Task 1",
                     startedAt = Clock.System.now().epochSeconds,
                     description = "Tast Description",
@@ -398,29 +589,47 @@ fun TasksScreenPreview() {
                     workPerSecond = 0.0,
                     totalWork = 10.0,
                     workCompleted = 3.0,
+                    workCompetedPerCharacter = emptyList(),
                     tags = emptyList(),
                     reqItems = emptyList(),
                     outputItems = emptyList(),
-                    experienceGain = emptyList(),
+                    experienceGain = listOf(
+                        5 to CharacterStat.Mining
+                    ),
                     isBackground = false
                 ),
                 Task(
-                    uuid = "UUID",
+                    uuid = "UUID 2",
                     name = "Task 2",
                     startedAt = Clock.System.now().epochSeconds,
                     description = "Tast Description",
-                    category = TaskCategory.Production.Mining,
+                    category = TaskCategory.Production.Woodcutting,
                     reqStatLevels = emptyList(),
                     workPerSecond = 0.0,
                     totalWork = 10.0,
                     workCompleted = 10.0,
+                    workCompetedPerCharacter = emptyList(),
                     tags = emptyList(),
                     reqItems = emptyList(),
                     outputItems = emptyList(),
-                    experienceGain = emptyList(),
+                    experienceGain = listOf(
+                        5 to CharacterStat.Woodcutting
+                    ),
                     isBackground = false
                 )
             )
         )
     }
+}
+
+@Preview
+@Composable
+fun RawResourceTaskListPreview() {
+    RawResourceTaskList(
+        name = "Task List",
+        visible = true,
+        taskList = PermanentTasks.allTasks.map { it.value },
+        startTask = {},
+        close = {}
+    )
 }

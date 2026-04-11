@@ -1,0 +1,16 @@
+CREATE TABLE CharacterInventory (
+    characterUuid TEXT NOT NULL,
+    itemUuid TEXT NOT NULL
+);
+
+getCharacterItems:
+SELECT * FROM CharacterInventory WHERE characterUuid = ?;
+
+clearCharacterInventory:
+DELETE FROM CharacterInventory WHERE characterUuid = ?;
+
+addToCharacterInventory:
+INSERT INTO CharacterInventory (characterUuid, itemUuid) VALUES (?, ?);
+
+listAll:
+SELECT * FROM CharacterInventory;

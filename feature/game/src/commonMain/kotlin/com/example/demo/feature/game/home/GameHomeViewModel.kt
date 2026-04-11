@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 data class GameHomeViewState(
     val isLoading: Boolean = false,
@@ -49,14 +51,18 @@ class GameHomeViewModel(
         _state.update { it.copy(newCharacterMeta = it.newCharacterMeta.copy(name = name)) }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     fun createNewCharacterMeta() {
-        val newCharacterMeta = _state.value.newCharacterMeta
-        _state.update {
-            it.copy(isLoading = true)
+        viewModelScope.launch {
+            val newCharacterMeta = _state.value.newCharacterMeta
+            val uuid = Uuid.random().toString()
+            _state.update {
+                it.copy(isLoading = true)
+            }
+            runCatching { simulation.updateCharacterMeta(CharacterMeta(characterUuid = uuid, name = newCharacterMeta.name)) }
+                .onSuccess { _state.update { it.copy(isLoading = false, errorMessage = null) } }
+                .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to create new character") } }
         }
-        runCatching { simulation.updateCharacterMeta(CharacterMeta(newCharacterMeta.name)) }
-            .onSuccess { _state.update { it.copy(isLoading = false, errorMessage = null) } }
-            .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to create new character") } }
     }
 
     fun onToastMessageConsumed() {
@@ -69,6 +75,8 @@ class GameHomeViewModel(
     }
 
     fun collectTask(task: Task) {
-        simulation.collectTask(task)
+        viewModelScope.launch {
+            simulation.collectTask(task)
+        }
     }
 }

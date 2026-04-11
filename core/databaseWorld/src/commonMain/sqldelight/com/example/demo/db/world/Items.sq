@@ -1,0 +1,22 @@
+CREATE TABLE Items (
+    uuid TEXT NOT NULL PRIMARY KEY,
+    itemTag TEXT NOT NULL,
+    quality REAL
+);
+
+getItem:
+SELECT * FROM Items WHERE uuid = ?;
+
+upsertItem:
+INSERT INTO Items(uuid, itemTag, quality)
+VALUES (?, ?, ?)
+ON CONFLICT(uuid) DO UPDATE SET quality = excluded.quality;
+
+purgeOrphans:
+DELETE FROM Items
+WHERE NOT EXISTS (
+    SELECT 1 FROM CharacterInventory ci WHERE ci.itemUuid = Items.uuid
+);
+
+listAll:
+SELECT * FROM Items;
