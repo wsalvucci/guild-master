@@ -14,10 +14,7 @@ object ItemCatalog {
     val all: Collection<Item> get() = byTagId.values
 
     /** Load/save / dynamic lookup */
-    fun getByTagId(tagId: String): Item? = byTagId[tagId]
-
-    fun requireByTagId(tagId: String): Item =
-        getByTagId(tagId) ?: error("Unknown item: $tagId")
+    fun getByTagId(tagId: String): Item = byTagId[tagId] ?: ItemList.Unknown
 }
 
 private fun Item.register() {
@@ -25,6 +22,11 @@ private fun Item.register() {
 }
 
 object ItemList {
+    val Unknown = Item(
+        name = "Unknown",
+        tag = "unknown",
+        description = "",
+    )
     object Armor {
         object Head {
             object Metal {

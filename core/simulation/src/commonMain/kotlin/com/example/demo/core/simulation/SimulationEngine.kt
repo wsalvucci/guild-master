@@ -93,6 +93,13 @@ class SimulationEngine(
     fun start() {
         if (loopJob?.isActive == true) return
 
+        val lastSaved = _worldSave.value?.header?.timestamp
+        if (lastSaved != null) {
+            val now = Clock.System.now().epochSeconds
+            val diff = now - lastSaved
+            fastForward(diff)
+        }
+
         loopJob = scope.launch {
             val mark = TimeSource.Monotonic.markNow()
             var last = mark.elapsedNow()
@@ -114,6 +121,29 @@ class SimulationEngine(
         loopJob?.cancel()
     }
 
+    fun fastForward(elapsedSeconds: Long) {
+        _worldSave.update { current ->
+            current ?: return@update null
+            current.copy(
+                activeTasks = current.activeTasks.map { task ->
+                    val increment = task.workPerSecond.times(elapsedSeconds.seconds.div(activeTaskInterval))
+                    val totalFastForward = task.workCompletedPerCharacter.size * increment
+                    val remaining = task.totalWork - task.workCompleted
+                    // Have to evenly divide work if it ran over the limit
+                    val reduce = when {
+                        totalFastForward <= 0.0 -> 0.0
+                        totalFastForward > remaining -> remaining / totalFastForward
+                        else -> 1.0
+                    }
+                    task.copy(
+                        workCompletedPerCharacter = task.workCompletedPerCharacter.map { char ->
+                            char.first + increment * reduce to char.second
+                        }
+                    )
+                }
+            )
+        }
+    }
 
     suspend fun updateCharacterMeta(characterMeta: CharacterMeta) {
         _worldSave.update { cur ->
@@ -138,10 +168,19 @@ class SimulationEngine(
     }
 
     suspend fun collectTask(task: Task) {
+        if (task.collected) return
         _worldSave.update { current ->
             if (current == null) return@update null
             current.copy(
-                activeTasks = current.activeTasks.filter { it.uuid != task.uuid },
+                activeTasks = current.activeTasks.map { activeTask ->
+                    if (activeTask.uuid == task.uuid) {
+                        activeTask.copy(
+                            collected = true,
+                        )
+                    } else {
+                        activeTask
+                    }
+                },
                 characterData = current.characterData.copy(
                     storage = current.characterData.storage.plus(
                         task.outputItems.flatMap { outItem ->
@@ -176,7 +215,11 @@ class SimulationEngine(
 
         val updatedRunning = runningTasks.map { task ->
             val increment = task.workPerSecond.times(simDelta.div(activeTaskInterval))
-            task.copy(workCompleted = minOf(task.workCompleted + increment, task.totalWork))
+            task.copy(
+                workCompletedPerCharacter = task.workCompletedPerCharacter.map { data ->
+                    data.first + increment to data.second
+                }
+            )
         }
 
         _worldSave.update { current ->

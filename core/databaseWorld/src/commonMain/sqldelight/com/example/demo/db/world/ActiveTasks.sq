@@ -1,0 +1,21 @@
+CREATE TABLE ActiveTasks (
+    uuid TEXT NOT NULL UNIQUE PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    work_per_tick REAL NOT NULL,
+    started_at INTEGER NOT NULL,
+    total_work REAL NOT NULL,
+    is_background INTEGER DEFAULT 0
+);
+
+upsertTask:
+INSERT INTO ActiveTasks(uuid, name, description, category, work_per_tick, started_at, total_work, is_background)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (uuid) DO NOTHING;
+
+getTasks:
+SELECT * FROM ActiveTasks;
+
+deleteCollectedTask:
+DELETE FROM ActiveTasks WHERE uuid = ?;

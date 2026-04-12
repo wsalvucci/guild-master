@@ -3,6 +3,7 @@ package com.example.demo.domain.usecases
 import com.example.demo.domain.model.worldsave.WorldSave
 import com.example.demo.domain.repository.SaveSlotRepository
 import com.example.demo.domain.repository.WorldSaveRepository
+import kotlin.time.Clock
 
 class AutoSaveGuildFileUseCase(
     private val worldSaveRepository: WorldSaveRepository,
@@ -12,7 +13,7 @@ class AutoSaveGuildFileUseCase(
         worldSaveRepository.save(worldSave, worldSave.header.saveId)
         saveSlotRepository.markSaved(
             saveId = worldSave.header.saveId,
-            savedAtEpochMs = worldSave.header.timestamp,
+            savedAtEpoch = Clock.System.now().epochSeconds,
             playtimeSeconds = worldSave.header.playtime
         )
     }

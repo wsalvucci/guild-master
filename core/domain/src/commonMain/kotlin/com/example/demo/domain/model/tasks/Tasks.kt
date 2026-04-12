@@ -3,7 +3,6 @@ package com.example.demo.domain.model.tasks
 import com.example.demo.domain.model.items.OutputItemData
 import com.example.demo.domain.model.items.ReqItemData
 import com.example.demo.domain.model.skills.CharacterStat
-import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -25,7 +24,9 @@ data class TaskTemplate(
     val isBackground: Boolean = false
 ) {
     @OptIn(ExperimentalUuidApi::class)
-    fun instantiate() : Task {
+    fun instantiate(
+        initiatingCharacterId: String
+    ) : Task {
         return Task(
             uuid = Uuid.random().toString(),
             startedAt = Clock.System.now().epochSeconds,
@@ -35,13 +36,15 @@ data class TaskTemplate(
             reqStatLevels = reqStatLevels,
             workPerSecond = workPerTick,
             totalWork = totalWork,
-            workCompleted = 0.0,
-            workCompetedPerCharacter = emptyList(),
+            workCompletedPerCharacter = listOf(
+                0.0 to initiatingCharacterId
+            ),
             tags = tags,
             reqItems = reqItems,
             outputItems = outputItems,
             experienceGain = experienceGain,
-            isBackground = isBackground
+            isBackground = isBackground,
+            collected = false
         )
     }
 }
@@ -67,14 +70,16 @@ data class Task(
     val reqStatLevels: List<ReqStatData>,
     val workPerSecond: Double,
     val totalWork: Double,
-    val workCompleted: Double,
-    val workCompetedPerCharacter: List<Pair<Double, String>>,
+    val workCompletedPerCharacter: List<Pair<Double, String>>,
     val tags: List<TaskTag>,
     val reqItems: List<ReqItemData>,
     val outputItems: List<OutputItemData>,
     val experienceGain: List<Pair<Int, CharacterStat>>,
-    val isBackground: Boolean
-)
+    val isBackground: Boolean,
+    val collected: Boolean
+) {
+    val workCompleted get() = workCompletedPerCharacter.fold(0.0) { acc, pair -> acc + pair.first}
+}
 
 data class ReqStatData(
     val stat: CharacterStat,
@@ -90,7 +95,7 @@ sealed class TaskTag {
     sealed class SkillTypeTag : TaskTag() {
         val color = 0xFF0000FF
         abstract val subKey: String
-        override val key = "skill_type-$subKey"
+        override val key: String get() = "skill_type-$subKey"
         data object Production : SkillTypeTag() {
             override val subKey = "production"
             override val name: String = "Production"
@@ -100,32 +105,56 @@ sealed class TaskTag {
     sealed class DurationTag : TaskTag() {
         val color = 0xFFFF0000
         abstract val subKey: String
-        override val key = "duration-$subKey"
+        override val key: String get() = "duration-$subKey"
 
         data object VeryShort : DurationTag() {
-            override val subKey = "very_short"
-            override val name: String = "Very Short"
+            override val subKey: String get() = "very_short"
+            override val name: String get() = "Very Short"
         }
 
         data object Short : DurationTag() {
-            override val subKey = "short"
-            override val name: String = "Short"
+            override val subKey: String get() = "short"
+            override val name: String get() = "Short"
         }
 
         data object Medium : DurationTag() {
-            override val subKey = "medium"
-            override val name: String = "Medium"
+            override val subKey: String get() = "medium"
+            override val name: String get() = "Medium"
         }
 
         data object Long : DurationTag() {
-            override val subKey = "long"
-            override val name: String = "Long"
+            override val subKey: String get() = "long"
+            override val name: String get() = "Long"
         }
 
         data object VeryLong : DurationTag() {
-            override val subKey = "very_long"
-            override val name: String = "Very Long"
+            override val subKey: String get() = "very_long"
+            override val name: String get() = "Very Long"
         }
+    }
+
+    data object Unknown : TaskTag() {
+        override val key: String get() = "unknown"
+        override val name: String get() = "Unknown"
+    }
+
+    companion object {
+        private val all: List<TaskTag> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            listOf(
+                SkillTypeTag.Production,
+                DurationTag.VeryShort,
+                DurationTag.Short,
+                DurationTag.Medium,
+                DurationTag.Long,
+                DurationTag.VeryLong,
+            )
+        }
+
+        private val bykey: Map<String, TaskTag> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            all.associateBy { it.key }
+        }
+
+        fun fromKey(key: String): TaskTag = bykey[key] ?: Unknown
     }
 }
 
@@ -142,17 +171,40 @@ sealed class TaskCategory {
 
     sealed class Production : TaskCategory() {
         abstract val subKey: String
-        override val key: String = "production-$subKey"
+        override val key: String get() = "production-$subKey"
 
         data object Mining : Production() {
-            override val name: String = "Mining"
-            override val subKey = "mining"
+            override val name: String get() = "Mining"
+            override val subKey: String get() = "mining"
         }
 
         data object Woodcutting : Production() {
-            override val name: String = "Woodcutting"
-            override val subKey: String = "woodcutting"
+            override val name: String get() = "Woodcutting"
+            override val subKey: String get() = "woodcutting"
         }
+    }
+
+    data object Unknown : TaskCategory() {
+        override val key: String
+            get() = "unknown"
+
+        override val name: String
+            get() = "Unknown"
+    }
+
+    companion object {
+        private val all: List<TaskCategory> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            listOf(
+                Production.Mining,
+                Production.Woodcutting,
+            )
+        }
+
+        private val byKey: Map<String, TaskCategory> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            all.associateBy { it.key }
+        }
+
+        fun fromKey(key: String): TaskCategory = byKey[key] ?: Unknown
     }
 }
 

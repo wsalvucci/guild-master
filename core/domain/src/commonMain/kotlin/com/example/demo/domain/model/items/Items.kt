@@ -57,44 +57,44 @@ sealed class ItemType {
     abstract val key: String // Use for db linking
     sealed class Equippable : ItemType() {
         abstract val subKey: String
-        override val key = "equippable-$subKey"
+        override val key: String get() = "equippable-$subKey"
         data object Head : Equippable() {
-            override val subKey: String = "head"
+            override val subKey: String get() = "head"
         }
         data object Neck : Equippable() {
-            override val subKey: String = "neck"
+            override val subKey: String get() = "neck"
         }
         data object Chest : Equippable() {
-            override val subKey: String = "chest"
+            override val subKey: String get() = "chest"
         }
         data object Hands : Equippable() {
-            override val subKey: String = "hands"
+            override val subKey: String get() = "hands"
         }
         data object Finger : Equippable() {
-            override val subKey: String = "finger"
+            override val subKey: String get() = "finger"
         }
         data object Back : Equippable() {
-            override val subKey: String = "back"
+            override val subKey: String get() = "back"
         }
         data object Belt : Equippable() {
-            override val subKey: String = "belt"
+            override val subKey: String get() = "belt"
         }
         data object Legs : Equippable() {
-            override val subKey: String = "legs"
+            override val subKey: String get() = "legs"
         }
         data object Feet : Equippable() {
-            override val subKey: String = "feet"
+            override val subKey: String get() = "feet"
         }
     }
 
     sealed class Resource : ItemType() {
         abstract val subKey: String
-        override val key = "resource-$subKey"
+        override val key get() = "resource-$subKey"
         data object Raw : Resource() {
-            override val subKey: String = "raw"
+            override val subKey: String get() = "raw"
         }
         data object Processed : Resource() {
-            override val subKey: String = "processed"
+            override val subKey: String get() = "processed"
         }
     }
 }

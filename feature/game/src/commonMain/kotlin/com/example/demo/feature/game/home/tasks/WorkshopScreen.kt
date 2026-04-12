@@ -53,7 +53,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.scope.Scope
 import kotlin.math.floor
-import kotlin.math.roundToInt
 import kotlin.time.Clock
 
 @Composable
@@ -70,7 +69,7 @@ fun WorkshopScreenRoot(
     val storageItems by viewModel.storageItems.collectAsStateWithLifecycle()
 
     WorkshopScreen(
-        activeTasks = activeTasks,
+        activeTasks = activeTasks.filter { !it.collected },
         storageItems = storageItems,
         startTask = startTask,
         collectTask = collectTask,
@@ -588,15 +587,15 @@ fun TasksScreenPreview() {
                     reqStatLevels = emptyList(),
                     workPerSecond = 0.0,
                     totalWork = 10.0,
-                    workCompleted = 3.0,
-                    workCompetedPerCharacter = emptyList(),
+                    workCompletedPerCharacter = emptyList(),
                     tags = emptyList(),
                     reqItems = emptyList(),
                     outputItems = emptyList(),
                     experienceGain = listOf(
                         5 to CharacterStat.Mining
                     ),
-                    isBackground = false
+                    isBackground = false,
+                    collected = false,
                 ),
                 Task(
                     uuid = "UUID 2",
@@ -607,15 +606,15 @@ fun TasksScreenPreview() {
                     reqStatLevels = emptyList(),
                     workPerSecond = 0.0,
                     totalWork = 10.0,
-                    workCompleted = 10.0,
-                    workCompetedPerCharacter = emptyList(),
+                    workCompletedPerCharacter = emptyList(),
                     tags = emptyList(),
                     reqItems = emptyList(),
                     outputItems = emptyList(),
                     experienceGain = listOf(
                         5 to CharacterStat.Woodcutting
                     ),
-                    isBackground = false
+                    isBackground = false,
+                    collected = false
                 )
             )
         )

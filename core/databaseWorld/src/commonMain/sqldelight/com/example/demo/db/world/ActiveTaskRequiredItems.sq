@@ -1,0 +1,15 @@
+CREATE TABLE ActiveTaskRequiredItems (
+    task_uuid TEXT NOT NULL,
+    item_key TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    min_quality REAL NOT NULL DEFAULT 0.0,
+    PRIMARY KEY (task_uuid, item_key)
+);
+
+upsertActiveTaskRequiredItems:
+INSERT INTO ActiveTaskRequiredItems(task_uuid, item_key, quantity, min_quality)
+VALUES (?, ?, ?, ?)
+ON CONFLICT (task_uuid, item_key) DO NOTHING;
+
+getActiveTaskRequiredItems:
+SELECT * FROM ActiveTaskRequiredItems WHERE task_uuid = ?;

@@ -1,0 +1,14 @@
+CREATE TABLE ActiveTaskCharacterWork (
+    task_uuid TEXT NOT NULL,
+    character_uuid TEXT NOT NULL,
+    work_completed REAL NOT NULL DEFAULT 0.0,
+    PRIMARY KEY (task_uuid, character_uuid)
+);
+
+upsertActiveTaskCharacterWork:
+INSERT INTO ActiveTaskCharacterWork(task_uuid, character_uuid, work_completed)
+VALUES (?, ?, ?)
+ON CONFLICT (task_uuid, character_uuid) DO UPDATE SET work_completed = excluded.work_completed;
+
+getActiveTaskCharacterWork:
+SELECT * FROM ActiveTaskCharacterWork WHERE task_uuid = ?;

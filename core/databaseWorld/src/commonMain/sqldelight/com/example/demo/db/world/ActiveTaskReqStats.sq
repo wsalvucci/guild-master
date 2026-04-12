@@ -1,0 +1,16 @@
+CREATE TABLE ActiveTaskReqStats (
+    task_uuid TEXT NOT NULL,
+    stat_key TEXT NOT NULL,
+    min_stat_level INTEGER NOT NULL,
+    bonus_above_level INTEGER NOT NULL,
+    max_bonus_level INTEGER NOT NULL,
+    PRIMARY KEY (task_uuid, stat_key)
+);
+
+upsertActiveTaskReqStats:
+INSERT INTO ActiveTaskReqStats(task_uuid, stat_key, min_stat_level, bonus_above_level, max_bonus_level)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT (task_uuid, stat_key) DO NOTHING;
+
+getActiveTaskReqState:
+SELECT * FROM ActiveTaskReqStats WHERE task_uuid = ?;

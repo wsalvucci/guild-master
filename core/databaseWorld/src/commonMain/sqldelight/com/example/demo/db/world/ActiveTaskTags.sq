@@ -1,0 +1,13 @@
+CREATE TABLE ActiveTaskTags (
+    task_uuid TEXT NOT NULL,
+    task_tag TEXT NOT NULL,
+    PRIMARY KEY (task_uuid, task_tag)
+);
+
+upsertActiveTaskTags:
+INSERT INTO ActiveTaskTags(task_uuid, task_tag)
+VALUES (?, ?)
+ON CONFLICT(task_uuid, task_tag) DO NOTHING;
+
+getActiveTaskTags:
+SELECT * FROM ActiveTaskTags WHERE task_uuid = ?;

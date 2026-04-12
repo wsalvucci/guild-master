@@ -86,7 +86,7 @@ fun GameHomeRoot(
         workshopScreen = { modifier ->
             WorkshopScreenRoot(
                 gameScope = gameScope,
-                startTask = viewModel::startTask,
+                startTask = viewModel::playerStartTask,
                 collectTask = viewModel::collectTask,
                 modifier = modifier,
             )

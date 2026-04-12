@@ -36,11 +36,6 @@ class GameHomeViewModel(
 
     init {
         viewModelScope.launch {
-            runCatching { simulation.refreshFromDb() }
-                .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message ?: "Failed to load save") }}
-        }
-
-        viewModelScope.launch {
             simulation.worldSave.collect { worldSave ->
                 _state.update { it.copy(worldSave = worldSave) }
             }
@@ -69,8 +64,16 @@ class GameHomeViewModel(
         _state.update { it.copy(toastMessage = null) }
     }
 
-    fun startTask(template: TaskTemplate) {
-        val newTask = template.instantiate()
+    fun playerStartTask(template: TaskTemplate) {
+        val characterId = _state.value.worldSave?.characterMeta?.characterUuid ?: return
+        if (_state.value.worldSave == null) return
+        startTask(template, characterId)
+    }
+
+    fun startTask(template: TaskTemplate, characterId: String) {
+        val newTask = template.instantiate(
+            initiatingCharacterId = characterId,
+        )
         simulation.addActiveTask(newTask)
     }
 

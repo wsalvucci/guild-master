@@ -2,15 +2,22 @@ package com.example.demo.data.repository
 
 import com.example.demo.db.world.CharacterMeta
 import com.example.demo.db.world.PlayerCharacterStats
+import com.example.demo.db.world.WorldDatabase
 import com.example.demo.db.world.WorldDatabaseFileManager
 import com.example.demo.db.world.WorldDatabaseManager
 import com.example.demo.domain.model.Guild
 import com.example.demo.domain.model.items.ItemCatalog
+import com.example.demo.domain.model.items.OutputItemData
+import com.example.demo.domain.model.items.ReqItemData
 import com.example.demo.domain.model.worldsave.CharacterData
 import com.example.demo.domain.model.skills.CharacterStat
 import com.example.demo.domain.model.skills.CharacterStatData
 import com.example.demo.domain.model.skills.CharacterStatKeys
+import com.example.demo.domain.model.tasks.ReqStatData
 import com.example.demo.domain.model.tasks.RequestBoard
+import com.example.demo.domain.model.tasks.Task
+import com.example.demo.domain.model.tasks.TaskCategory
+import com.example.demo.domain.model.tasks.TaskTag
 import com.example.demo.domain.model.worldsave.WorldFlag
 import com.example.demo.domain.model.worldsave.WorldSave
 import com.example.demo.domain.model.worldsave.WorldSaveHeader
@@ -87,6 +94,7 @@ class WorldSaveRepositoryImpl(
             // OR ITEMS WILL BE LOST ON SAVE
             db.itemsQueries.purgeOrphans()
         }
+        saveTasks(db, worldSave.activeTasks)
     }
 
     override suspend fun load(saveId: Long): WorldSave {
@@ -120,6 +128,8 @@ class WorldSaveRepositoryImpl(
 
         val metaData = saveSlotRepository.getSaveSlot(saveId)
 
+        val loadedActiveTasks = loadTasks(db)
+
         return WorldSave(
             header = WorldSaveHeader(
                 saveId = saveId,
@@ -141,15 +151,15 @@ class WorldSaveRepositoryImpl(
                                 experience = 0L
                             )
                     },
-                storage = playerCharacterItems.mapNotNull { item ->
+                storage = playerCharacterItems.map { item ->
                     val template = ItemCatalog.getByTagId(item.itemTag)
-                    template?.instantiate(
+                    template.instantiate(
                         uuid = item.uuid,
                         quality = item.quality,
                     )
                 }
             ),
-            activeTasks = emptyList(), // TODO
+            activeTasks = loadedActiveTasks,
             // TODO
             guild = Guild(
                 id = 0L,
@@ -190,6 +200,139 @@ class WorldSaveRepositoryImpl(
                 uuid = characterUuid,
             )
         }
+    }
+}
+
+private fun saveTasks(db: WorldDatabase, tasks: List<Task>) {
+    db.transaction {
+        tasks.forEach { task ->
+            if (task.collected) {
+                db.activeTasksQueries.deleteCollectedTask(
+                    uuid = task.uuid,
+                )
+            } else {
+                db.activeTasksQueries.upsertTask(
+                    uuid = task.uuid,
+                    name = task.name,
+                    description = task.description,
+                    category = task.category.key,
+                    work_per_tick = task.workPerSecond,
+                    started_at = task.startedAt,
+                    total_work = task.totalWork,
+                    is_background = if (task.isBackground) 1 else 0,
+                )
+
+                task.reqStatLevels.forEach { reqStatData ->
+                    db.activeTaskReqStatsQueries.upsertActiveTaskReqStats(
+                        task_uuid = task.uuid,
+                        stat_key = reqStatData.stat.key.name,
+                        min_stat_level = reqStatData.minLevel.toLong(),
+                        bonus_above_level = reqStatData.bonusWorkAboveMinLevel.toLong(),
+                        max_bonus_level = reqStatData.maxBonusLevel.toLong()
+                    )
+                }
+
+                task.workCompletedPerCharacter.forEach { characterData ->
+                    db.activeTaskCharacterWorkQueries.upsertActiveTaskCharacterWork(
+                        task_uuid = task.uuid,
+                        character_uuid = characterData.second,
+                        work_completed = characterData.first
+                    )
+                }
+
+                task.tags.forEach { tagData ->
+                    db.activeTaskTagsQueries.upsertActiveTaskTags(
+                        task_uuid = task.uuid,
+                        task_tag = tagData.name,
+                    )
+                }
+
+                task.reqItems.forEach { reqItemData ->
+                    db.activeTaskRequiredItemsQueries.upsertActiveTaskRequiredItems(
+                        task_uuid = task.uuid,
+                        item_key = reqItemData.itemTemplate.tag,
+                        quantity = reqItemData.quantity.toLong(),
+                        min_quality = reqItemData.minQuality,
+                    )
+                }
+
+                task.outputItems.forEach { outputItemData ->
+                    db.activeTaskOutputItemsQueries.upsertActiveTaskOutputItems(
+                        task_uuid = task.uuid,
+                        item_key = outputItemData.itemTemplate.tag,
+                        quantity = outputItemData.quantity.toLong(),
+                        min_quality = outputItemData.minQuality,
+                        max_quality = outputItemData.maxQuality,
+                    )
+                }
+
+                task.experienceGain.forEach { experienceGainData ->
+                    db.activeTaskExperienceGainsQueries.upsertActiveTaskExperienceGains(
+                        task_uuid = task.uuid,
+                        stat_key = experienceGainData.second.key.name,
+                        experience_gain = experienceGainData.first.toLong()
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun loadTasks(db: WorldDatabase): List<Task> {
+    return db.activeTasksQueries.getTasks().executeAsList().map { taskData ->
+        Task(
+            uuid = taskData.uuid,
+            startedAt = taskData.started_at,
+            name = taskData.name,
+            description = taskData.description,
+            category = TaskCategory.fromKey(taskData.category),
+            reqStatLevels = db.activeTaskReqStatsQueries.getActiveTaskReqState(task_uuid = taskData.uuid).executeAsList().map { reqStatData ->
+                ReqStatData(
+                    stat = CharacterStat.getFromKey(CharacterStatKeys.fromString(reqStatData.stat_key)),
+                    minLevel = reqStatData.min_stat_level.toInt(),
+                    bonusWorkAboveMinLevel = reqStatData.bonus_above_level.toInt(),
+                    maxBonusLevel = reqStatData.max_bonus_level.toInt()
+                )
+            },
+            workPerSecond = taskData.work_per_tick,
+            totalWork = taskData.total_work,
+            workCompletedPerCharacter = db.activeTaskCharacterWorkQueries.getActiveTaskCharacterWork(
+                task_uuid = taskData.uuid
+            ).executeAsList().map { characterWorkData ->
+                characterWorkData.work_completed to characterWorkData.character_uuid
+            },
+            tags = db.activeTaskTagsQueries.getActiveTaskTags(
+                task_uuid = taskData.uuid
+            ).executeAsList().map { taskTagData ->
+                TaskTag.fromKey(taskTagData.task_tag)
+            },
+            reqItems = db.activeTaskRequiredItemsQueries.getActiveTaskRequiredItems(
+                task_uuid = taskData.uuid
+            ).executeAsList().map { requiredItemData ->
+                ReqItemData(
+                    itemTemplate = ItemCatalog.getByTagId(requiredItemData.item_key),
+                    quantity = requiredItemData.quantity.toInt(),
+                    minQuality = requiredItemData.min_quality,
+                )
+            },
+            outputItems = db.activeTaskOutputItemsQueries.getActiveTaskOutputItems(
+                task_uuid = taskData.uuid
+            ).executeAsList().map { outputItemData ->
+                OutputItemData(
+                    itemTemplate = ItemCatalog.getByTagId(outputItemData.item_key),
+                    quantity = outputItemData.quantity.toInt(),
+                    minQuality = outputItemData.min_quality,
+                    maxQuality = outputItemData.max_quality,
+                )
+            },
+            experienceGain = db.activeTaskExperienceGainsQueries.getActiveTaskExperienceGains(
+                task_uuid = taskData.uuid
+            ).executeAsList().map { experienceGainData ->
+                experienceGainData.experience_gain.toInt() to CharacterStat.getFromKey(CharacterStatKeys.fromString(experienceGainData.stat_key))
+            },
+            isBackground = taskData.is_background == 1L,
+            collected = false
+        )
     }
 }
 

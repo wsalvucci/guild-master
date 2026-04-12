@@ -2,8 +2,6 @@ package com.example.demo.data.repository
 
 import com.example.demo.db.meta.SaveFile
 import com.example.demo.db.meta.SaveFileQueries
-import com.example.demo.db.world.WorldDatabaseFileManager
-import com.example.demo.db.world.WorldDatabaseManager
 import com.example.demo.domain.model.WorldSaveSlot
 import com.example.demo.domain.repository.SaveSlotRepository
 import com.example.demo.domain.util.ioDispatcher
@@ -55,10 +53,10 @@ class SaveSlotRepositoryImpl(
         queries.selectById(saveId).executeAsOneOrNull()?.toDomain()
     }
 
-    override suspend fun markSaved(saveId: Long, savedAtEpochMs: Long, playtimeSeconds: Long) {
+    override suspend fun markSaved(saveId: Long, savedAtEpoch: Long, playtimeSeconds: Long) {
         withContext(dispatcher) {
             queries.markSaved(
-                savedAtEpochMs,
+                savedAtEpoch,
                 playtimeSeconds,
                 saveId,
             ).await()

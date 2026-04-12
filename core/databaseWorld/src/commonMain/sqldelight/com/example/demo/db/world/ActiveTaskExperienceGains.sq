@@ -1,0 +1,14 @@
+CREATE TABLE ActiveTaskExperienceGains (
+    task_uuid TEXT NOT NULL,
+    stat_key TEXT NOT NULL,
+    experience_gain INTEGER NOT NULL,
+    PRIMARY KEY (task_uuid, stat_key)
+);
+
+upsertActiveTaskExperienceGains:
+INSERT INTO ActiveTaskExperienceGains(task_uuid, stat_key, experience_gain)
+VALUES (?, ?, ?)
+ON CONFLICT (task_uuid, stat_key) DO NOTHING;
+
+getActiveTaskExperienceGains:
+SELECT * FROM ActiveTaskExperienceGains WHERE task_uuid = ?;

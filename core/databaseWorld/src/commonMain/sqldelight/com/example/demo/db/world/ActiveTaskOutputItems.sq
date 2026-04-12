@@ -1,0 +1,16 @@
+CREATE TABLE ActiveTaskOutputItems (
+    task_uuid TEXT NOT NULL,
+    item_key TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    min_quality REAL NOT NULL DEFAULT 0.0,
+    max_quality REAL NOT NULL DEFAULT 10.0,
+    PRIMARY KEY (task_uuid, item_key)
+);
+
+upsertActiveTaskOutputItems:
+INSERT INTO ActiveTaskOutputItems(task_uuid, item_key, quantity, min_quality, max_quality)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT (task_uuid, item_key) DO NOTHING;
+
+getActiveTaskOutputItems:
+SELECT * FROM ActiveTaskOutputItems WHERE task_uuid = ?;
