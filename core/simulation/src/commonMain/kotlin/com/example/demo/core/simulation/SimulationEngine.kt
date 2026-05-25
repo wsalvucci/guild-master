@@ -1,6 +1,7 @@
 package com.example.demo.core.simulation
 
 import com.example.demo.domain.model.items.ItemInstance
+import com.example.demo.domain.model.items.instantiate
 import com.example.demo.domain.model.tasks.Task
 import com.example.demo.domain.model.worldsave.CharacterMeta
 import com.example.demo.domain.model.worldsave.WorldSave
@@ -184,9 +185,7 @@ class SimulationEngine(
                 characterData = current.characterData.copy(
                     storage = current.characterData.storage.plus(
                         task.outputItems.flatMap { outItem ->
-                            List(outItem.quantity) {
-                                outItem.itemTemplate.instantiate()
-                            }
+                            List(outItem.quantity) { outItem.instantiate() }
                         }
                     ),
                     skills = current.characterData.skills.map { skill ->

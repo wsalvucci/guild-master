@@ -39,6 +39,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.demo.domain.model.items.ItemInstance
+import com.example.demo.domain.model.items.toDisplayName
 import com.example.demo.domain.model.skills.CharacterStat
 import com.example.demo.domain.model.tasks.PermanentTasks
 import com.example.demo.domain.model.tasks.Task
@@ -81,7 +82,8 @@ private enum class SubScreens {
     MINING,
     WOODCUTTING,
     FISHING,
-    FARMING
+    FARMING,
+    WORKSHOP
 }
 
 @Composable
@@ -190,7 +192,7 @@ fun WorkshopScreen(
                     WorkshopMenuButton(
                         name = "Woodcutting",
                         color = Color(0xFFAA7722),
-                        open = {},
+                        open = { subscreenVisible = SubScreens.WOODCUTTING },
                         modifier = Modifier.weight(1f)
                     )
                     WorkshopMenuButton(
@@ -217,7 +219,7 @@ fun WorkshopScreen(
                     WorkshopMenuButton(
                         name = "Workbench",
                         color = Color(0xFFC0C0C0),
-                        open = {},
+                        open = { subscreenVisible = SubScreens.WORKSHOP },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -500,7 +502,7 @@ fun RawResourceTaskList(
                                                 modifier = Modifier.padding(horizontal = 4.dp)
                                             ) {
                                                 Text(
-                                                    text = outputItem.itemTemplate.name + " x" + outputItem.quantity.toString(),
+                                                    text = outputItem.itemKey.toDisplayName() + " x" + outputItem.quantity.toString(),
                                                     style = MaterialTheme.typography.bodySmall,
                                                 )
                                             }
@@ -558,6 +560,12 @@ fun RawResourceTaskList(
             }
         }
     }
+}
+
+fun WorkbenchSubScreen(
+    visible: Boolean
+) {
+
 }
 
 @Preview(

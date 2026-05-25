@@ -1,6 +1,8 @@
 package com.example.demo.domain.model.tasks
 
-import com.example.demo.domain.model.items.ItemList
+import com.example.demo.domain.model.items.CraftingItemType
+import com.example.demo.domain.model.items.CraftingVariantType
+import com.example.demo.domain.model.items.ItemKey
 import com.example.demo.domain.model.items.OutputItemData
 import com.example.demo.domain.model.skills.CharacterStat
 
@@ -14,26 +16,26 @@ object PermanentTasks {
                 stat = CharacterStat.Mining,
                 minLevel = 1,
                 bonusWorkAboveMinLevel = 1,
-                maxBonusLevel = 5
+                maxBonusLevel = 5,
             )
         ),
         workPerTick = 1.0,
         totalWork = 10.0,
         tags = listOf(
             TaskTag.SkillTypeTag.Production,
-            TaskTag.DurationTag.VeryShort
+            TaskTag.DurationTag.VeryShort,
         ),
         outputItems = listOf(
             OutputItemData(
-                itemTemplate = ItemList.Resource.Raw.Scavange.Rocks,
+                itemKey = ItemKey(CraftingItemType.RawStone.key, CraftingVariantType.StoneType.Generic.key),
                 minQuality = 0.0,
                 maxQuality = 2.0,
-                quantity = 5
+                quantity = 5,
             )
         ),
         experienceGain = listOf(
             4 to CharacterStat.Mining
-        )
+        ),
     )
 
     val CollectSticks = TaskTemplate(
@@ -45,26 +47,26 @@ object PermanentTasks {
                 stat = CharacterStat.Woodcutting,
                 minLevel = 1,
                 bonusWorkAboveMinLevel = 1,
-                maxBonusLevel = 5
+                maxBonusLevel = 5,
             )
         ),
         workPerTick = 1.0,
         totalWork = 10.0,
         tags = listOf(
             TaskTag.SkillTypeTag.Production,
-            TaskTag.DurationTag.VeryShort
+            TaskTag.DurationTag.VeryShort,
         ),
         outputItems = listOf(
             OutputItemData(
-                itemTemplate = ItemList.Resource.Raw.Scavange.Sticks,
+                itemKey = ItemKey(CraftingItemType.RawWood.key, CraftingVariantType.WoodType.Generic.key),
                 minQuality = 0.0,
                 maxQuality = 2.0,
-                quantity = 5
+                quantity = 5,
             )
         ),
         experienceGain = listOf(
             4 to CharacterStat.Woodcutting
-        )
+        ),
     )
 
     val allTasks = listOf(

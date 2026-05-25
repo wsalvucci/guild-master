@@ -6,7 +6,8 @@ import com.example.demo.db.world.WorldDatabase
 import com.example.demo.db.world.WorldDatabaseFileManager
 import com.example.demo.db.world.WorldDatabaseManager
 import com.example.demo.domain.model.Guild
-import com.example.demo.domain.model.items.ItemCatalog
+import com.example.demo.domain.model.items.ItemKey
+import com.example.demo.domain.model.items.ItemInstance
 import com.example.demo.domain.model.items.OutputItemData
 import com.example.demo.domain.model.items.ReqItemData
 import com.example.demo.domain.model.worldsave.CharacterData
@@ -72,8 +73,8 @@ class WorldSaveRepositoryImpl(
             worldSave.characterData.storage.forEach { item ->
                 db.itemsQueries.upsertItem(
                     uuid = item.uuid,
-                    itemTag = item.tag,
-                    quality = item.quality
+                    itemTag = item.key.serialize(),
+                    quality = item.quality,
                 )
             }
 
@@ -152,9 +153,9 @@ class WorldSaveRepositoryImpl(
                             )
                     },
                 storage = playerCharacterItems.map { item ->
-                    val template = ItemCatalog.getByTagId(item.itemTag)
-                    template.instantiate(
+                    ItemInstance(
                         uuid = item.uuid,
+                        key = ItemKey.deserialize(item.itemTag),
                         quality = item.quality,
                     )
                 }
@@ -250,7 +251,7 @@ private fun saveTasks(db: WorldDatabase, tasks: List<Task>) {
                 task.reqItems.forEach { reqItemData ->
                     db.activeTaskRequiredItemsQueries.upsertActiveTaskRequiredItems(
                         task_uuid = task.uuid,
-                        item_key = reqItemData.itemTemplate.tag,
+                        item_key = reqItemData.itemKey.serialize(),
                         quantity = reqItemData.quantity.toLong(),
                         min_quality = reqItemData.minQuality,
                     )
@@ -259,7 +260,7 @@ private fun saveTasks(db: WorldDatabase, tasks: List<Task>) {
                 task.outputItems.forEach { outputItemData ->
                     db.activeTaskOutputItemsQueries.upsertActiveTaskOutputItems(
                         task_uuid = task.uuid,
-                        item_key = outputItemData.itemTemplate.tag,
+                        item_key = outputItemData.itemKey.serialize(),
                         quantity = outputItemData.quantity.toLong(),
                         min_quality = outputItemData.minQuality,
                         max_quality = outputItemData.maxQuality,
@@ -310,7 +311,7 @@ private fun loadTasks(db: WorldDatabase): List<Task> {
                 task_uuid = taskData.uuid
             ).executeAsList().map { requiredItemData ->
                 ReqItemData(
-                    itemTemplate = ItemCatalog.getByTagId(requiredItemData.item_key),
+                    itemKey = ItemKey.deserialize(requiredItemData.item_key),
                     quantity = requiredItemData.quantity.toInt(),
                     minQuality = requiredItemData.min_quality,
                 )
@@ -319,7 +320,7 @@ private fun loadTasks(db: WorldDatabase): List<Task> {
                 task_uuid = taskData.uuid
             ).executeAsList().map { outputItemData ->
                 OutputItemData(
-                    itemTemplate = ItemCatalog.getByTagId(outputItemData.item_key),
+                    itemKey = ItemKey.deserialize(outputItemData.item_key),
                     quantity = outputItemData.quantity.toInt(),
                     minQuality = outputItemData.min_quality,
                     maxQuality = outputItemData.max_quality,
